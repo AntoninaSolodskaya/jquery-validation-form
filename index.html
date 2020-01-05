@@ -1,0 +1,1101 @@
+<!-- <!DOCTYPE >
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>HTML Form Validate</title>
+    <style>
+      .validate .errorpane {
+        background: #f5e5e6;
+        border: 1px solid #f5989d;
+        -khtml-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        border-radius: 5px;
+        padding: 5px;
+        color: #c9252b;
+        text-align: left;
+      }
+
+      .validate .hidden {
+        display: none;
+      }
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+  </head>
+
+  <body>
+    <h3>Demonstration of Basic Usage</h3>
+
+    <form id="c" class="validate">
+      <label>Name</label>
+      <input
+        type="text"
+        name="name"
+        value=""
+        id="name"
+      />
+      <div id="nameErr" class="hidden errorpane">Name is required</div>
+
+      <label>Email</label>
+      <input
+        type="text"
+        name="email"
+        value=""
+        class="valemail"
+        data-valemail="emailErr"
+      />
+      <div id="emailErr" class="hidden errorpane">
+        Please enter a valid Email address
+      </div>
+
+      <label>Number Field</label>
+      <input
+        type="text"
+        name="numbers"
+        value=""
+        class="valnumsonly"
+        data-valnumsonly="numbersNumsErr"
+      />
+      <div id="numbersNumsErr" class="hidden errorpane">
+        Number field must be Numbers Only
+      </div>
+
+      <label>MyString: </label>
+      <input
+        type="text"
+        name="name"
+        value=""
+        class="valrequired"
+        data-valrequired="nameErr2"
+      />
+      <div id="nameErr2" class="hidden errorpane">Name is required</div>
+
+      <input type="submit" value="submit" name="submit" />
+    </form>
+
+    <script>
+      (function($) {
+        $.formValidate = function(element, options) {
+          var defaults = {
+            //When to Validate
+            validateOnSubmit: true,
+            //Error Class
+            errorClass: "error",
+            //Required
+            requiredClass: "valrequired",
+            //Numsonly
+            numsOnlyClass: "valnumsonly",
+            //Minimum val?  (int only)
+            minimumClass: "valmin",
+            //Maximum val?  (int only)
+            maximumClass: "valmax",
+            //Email?
+            emailClass: "valemail",
+            //Required Only If Visible?
+            visibleReqClass: "valifvisible",
+            //Exact Length?
+            exactlenClass: "valexactlen",
+            //Strict Match?
+            strictMatchClass: "valstrictmatch",
+            //Phone Number?
+            phoneClass: "valphone",
+            //callback passthrough
+            validCallback: function() {},
+            invalidCallback: function() {}
+          };
+
+          var plugin = this;
+
+          plugin.settings = {};
+
+          var $element = $(element),
+            element = element;
+
+          plugin.init = function() {
+            plugin.settings = $.extend({}, defaults, options);
+
+            if (plugin.settings.validateOnSubmit) {
+              $element.submit(function() {
+                return plugin.validateForm();
+              });
+            }
+          };
+
+          plugin.validateForm = function() {
+            if (plugin.frmValidate($element)) {
+              plugin.settings.validCallback();
+              return true;
+            } else {
+              plugin.settings.invalidCallback();
+              return false;
+            }
+          };
+
+          plugin.frmValidate = function(form) {
+            var IsValid = true;
+            $(form)
+              .find("*")
+              .each(function() {
+                if (!plugin.validationStation($(this))) {
+                  if (IsValid) IsValid = false;
+                }
+              });
+            return IsValid;
+          };
+
+          plugin.validationStation = function(obj) {
+            var inputValid = true;
+            /*******
+             ** 1. Required?
+             *******/
+            if (obj.hasClass(plugin.settings.requiredClass)) {
+              //reset
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.requiredClass)).slideUp("fast");
+              //checkbox
+              if (obj.attr("type") === "checkbox") {
+                if (!obj.is(":checked")) {
+                  inputValid = false;
+                  obj.click(function() {
+                    if (obj.is(":checked")) {
+                      obj.removeClass(plugin.settings.errorClass);
+                      $("#" + obj.data(plugin.settings.requiredClass)).slideUp(
+                        "fast"
+                      );
+                    }
+                  });
+                  obj.addClass(plugin.settings.errorClass);
+                  $("#" + obj.data(plugin.settings.requiredClass)).slideDown();
+                }
+              } else {
+                //text
+                if (obj.val() === "" || obj.val() == null) {
+                  inputValid = false;
+                  //check each keyup for valid input
+                  if (obj.attr("type") === "text") {
+                    obj.keyup(function() {
+                      if (obj.val() != "" && obj.val() != null) {
+                        obj.removeClass(plugin.settings.errorClass);
+                        $(
+                          "#" + obj.data(plugin.settings.requiredClass)
+                        ).slideUp("fast");
+                      }
+                    });
+                  } else {
+                    if (obj.is("select")) {
+                      obj.change(function() {
+                        if (obj.val() != "" && obj.val() != null) {
+                          obj.removeClass(plugin.settings.errorClass);
+                          $(
+                            "#" + obj.data(plugin.settings.requiredClass)
+                          ).slideUp("fast");
+                        }
+                      });
+                    }
+                  }
+                  //end keyup check
+                  obj.addClass(plugin.settings.errorClass);
+                  $("#" + obj.data(plugin.settings.requiredClass)).slideDown();
+                }
+              }
+            }
+
+            /*******
+             ** 2. Numsonly?
+             *******/
+            if (obj.hasClass(plugin.settings.numsOnlyClass) && inputValid) {
+              //numbers only
+              //reset
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.numsOnlyClass)).slideUp("fast");
+              if (!/^[0-9]+$/.test(obj.val())) {
+                inputValid = false;
+                obj.keyup(function() {
+                  if (/^[0-9]+$/.test(obj.val())) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.numsOnlyClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.numsOnlyClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 3. Minimum val?  (int only)
+             *******/
+            if (
+              obj.hasClass(plugin.settings.minimumClass) &&
+              /^[0-9]+$/.test(obj.val())
+            ) {
+              //min number
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.minimumClass)).slideUp("fast");
+              if (
+                obj.val() < obj.data(plugin.settings.minimumClass + "-value")
+              ) {
+                inputValid = false;
+                obj.keyup(function() {
+                  if (
+                    !obj.val() <
+                    obj.data(plugin.settings.minimumClass + "-value")
+                  ) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.minimumClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.minimumClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 4. Maximum val?  (int only)
+             *******/
+            if (
+              obj.hasClass(plugin.settings.maximumClass) &&
+              /^[0-9]+$/.test(obj.val())
+            ) {
+              //maximum number
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.maximumClass)).slideUp("fast");
+              if (
+                obj.val() > obj.data(plugin.settings.maximumClass + "-value")
+              ) {
+                inputValid = false;
+                obj.keyup(function() {
+                  if (
+                    !obj.val() >
+                    obj.data(plugin.settings.maximumClass + "-value")
+                  ) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.maximumClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.maximumClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 5. Email?
+             *******/
+            //if ( (obj.hasClass(plugin.settings.emailClass)) && (!obj.hasClass(plugin.settings.errorClass)) ) {  //email
+            if (obj.hasClass(plugin.settings.emailClass)) {
+              //email
+              obj.removeClass(plugin.settings.errorClass);
+              reg = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+              if (!reg.test(obj.val())) {
+                inputValid = false;
+                obj.keyup(function() {
+                  var emailTest = obj.val();
+                  if (reg.test(emailTest)) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.emailClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.emailClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 6. Required Only If Visible?
+             *******/
+            if (
+              obj.hasClass(plugin.settings.visibleReqClass) &&
+              obj.is(":visible")
+            ) {
+              //required if visible
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.visibleReqClass)).slideUp(
+                "fast"
+              );
+              if (obj.val() === "" || obj.val() == null) {
+                inputValid = false;
+                obj.keyup(function() {
+                  if (obj.val() != "" && obj.val() != null) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.visibleReqClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.visibleReqClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 7. Exact Length Required?
+             *******/
+            if (obj.hasClass(plugin.settings.exactlenClass)) {
+              //exact length required
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.exactlenClass)).slideUp("fast");
+              if (
+                obj.val().length !=
+                obj.data(plugin.settings.exactlenClass + "-value")
+              ) {
+                inputValid = false;
+                obj.keyup(function() {
+                  if (
+                    obj.val().length ===
+                    obj.data(plugin.settings.exactlenClass + "-value")
+                  ) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.exactlenClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.exactlenClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 8. Strict Match?
+             *******/
+            if (obj.hasClass(plugin.settings.strictMatchClass)) {
+              //exact length required
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.strictMatchClass)).slideUp(
+                "fast"
+              );
+              //split value on commas into array
+              //loop array
+              var arrayMatchStrings = obj
+                .data(plugin.settings.strictMatchClass + "-value")
+                .split(",");
+              var matched = false;
+
+              for (strings in arrayMatchStrings) {
+                if (obj.val() === arrayMatchStrings[strings]) {
+                  matched = true;
+                }
+              }
+
+              if (!matched) {
+                inputValid = false;
+                obj.keyup(function() {
+                  var matched = false;
+                  for (strings in arrayMatchStrings) {
+                    if (obj.val() === arrayMatchStrings[strings]) {
+                      matched = true;
+                    }
+                  }
+                  if (matched) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.strictMatchClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.strictMatchClass)).slideDown();
+              }
+            }
+
+            /*******
+             ** 8. Phone Number?
+             *******/
+            if (obj.hasClass(plugin.settings.phoneClass)) {
+              obj.removeClass(plugin.settings.errorClass);
+              $("#" + obj.data(plugin.settings.phoneClass)).slideUp("fast");
+              ireg = /^[0-9\(\)\-\. ]*$/;
+              if (
+                obj.val() === "" ||
+                obj.val() == null ||
+                !ireg.test(obj.val())
+              ) {
+                inputValid = false;
+                obj.keyup(function() {
+                  var phoneTest = obj.val();
+                  if (
+                    obj.val() != "" &&
+                    obj.val() != null &&
+                    ireg.test(phoneTest)
+                  ) {
+                    obj.removeClass(plugin.settings.errorClass);
+                    $("#" + obj.data(plugin.settings.phoneClass)).slideUp(
+                      "fast"
+                    );
+                  }
+                });
+                obj.addClass(plugin.settings.errorClass);
+                $("#" + obj.data(plugin.settings.phoneClass)).slideDown();
+              }
+            }
+
+            return inputValid;
+          };
+
+          plugin.init();
+        };
+
+        $.fn.formValidate = function(options) {
+          return this.each(function() {
+            if (undefined == $(this).data("formValidate")) {
+              var plugin = new $.formValidate(this, options);
+              $(this).data("formValidate", plugin);
+            }
+          });
+        };
+      })(jQuery);
+
+      $(document).ready(function() {
+        $(".validate").formValidate({
+          name: {
+            class: "valrequired";
+            data-valrequired:"nameErr"
+          }
+        });
+      });
+    </script>
+  </body>
+</html> -->
+<html>
+  <head>
+    <link rel="stylesheet" href="./styles.css" type="text/css" />
+  </head>
+  <body>
+    </form><form id="form01" method="POST">
+			Name: <input name="name" type="text" /><br />
+      Surname: <input name="surname" type="text" /><br />
+			Phone number: <input name="phone" type="tel" /><br />
+      Email: <input name="email" type="email" /><br />
+      Password: <input name="password" type="password" /><br />
+      Confirm password: <input name="password_confirmation" type="password" /><br />
+			<input type="submit" name="submit" value="odeslat" />
+		</form>
+		<br />
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+    <script>
+   (function($) {
+	var TdpPlugin = function($el, options, parameters) {
+		var self = this;
+		// defaults
+		this._defaults = {
+			animationSpeed: 'slow',
+			animationFastSpeed: 'fast',
+			errorMessageEmptyInput: 'Required',
+			validationOkElement: 'span.tdp-vld-ok',
+			prevalidation: true,
+			notEmptyAsValidated: true,
+			validationOkShow: function(el) {
+				return el.fadeIn(self.options('animationSpeed'));
+			},
+			validationOkHide: function(el) {
+				return el.fadeOut(self.options('animationFastSpeed'));
+			},
+			validationWorkingElement: 'span.tdp-vld-working',
+			validationWorkingShow: function(el) {
+				return el.fadeIn(self.options('animationSpeed'));
+			},
+			validationWorkingHide: function(el) {
+				return el.fadeOut(self.options('animationFastSpeed'));
+			},
+			validationMessageElement: 'span.tdp-vld-msg',
+			validationMessageSeparator: '<br />',
+			validationMessageProcessor: function(message) {
+				return message.join(self.options('validationMessageSeparator'));
+			},
+			
+			validationMessageShow: function(el) {
+				return el.fadeIn(self.options('animationSpeed'));
+			},
+			validationMessageHide: function(el) {
+				return el.fadeOut(self.options('animationFastSpeed'));
+			},
+			
+			validatorResponseProcessor: function(data) {
+				if (data) {
+					return data;
+				}
+				return false;
+			},
+			submitMethod: null, // use built-in submit method
+			beforeSubmit: null,
+			submitElement: 'input[type="submit"]',
+			
+			skipOnInput: ['validator', 'min', 'not', 'match'],
+			verbose: false,
+			logger: null
+		};
+		this._options = $.extend( true, {}, this._defaults, options );
+		this._parameters = $.extend( true, {}, parameters);
+		this._parameters.element = $el;
+		this.validators_to_go = 0;
+		this.after_validators = null;
+		this._fully_validated = false;
+
+		// options - getter/setter
+		this.options = function(options) {
+			if (options) {
+				if (typeof(options) === 'string') {
+					return this._options[options];
+				}
+				return $.extend(true, this._options, options);
+			}
+			return this._options;
+		};
+
+		
+		function outerElement(el) {
+			return el.split(' ')[0];
+		}
+
+		function getByOuterElement(el, name) {
+			var els = el.split(' ');
+			els[0] += '[name="' + name + '"]';
+			return els.join(' ');
+		}
+
+		function firstElement(element, pos) {
+			var element_position;
+			if (pos === null) {
+				pos = element_position;
+			} 
+			return pos;
+		}
+		//get input element
+		this.getInput = function (name) {
+			if (!this._parameters.values[name]) {
+				return '';
+			}
+			var element = $(this._parameters.element).find('input[name="' + name + '"]').first();
+			if (element.length) {
+				return element;
+			} 
+			return '';
+		};
+
+		//get value from input name
+		this.getValue = function (name) {
+			if (this._parameters.values[name].type === 'hidden') {
+				return this._parameters.values[name].value;
+			}
+			var element = this.getInput(name);
+			if (element) {
+				return element.val();
+			}
+			return '';
+		};
+
+		//set value to input by input name
+		this.setValue = function (name, value) {
+			var input = this.getInput(name);
+			if (!input.length) {
+				return false;
+			}
+			return this.getInput(name).val(value);
+		};
+
+		this.showValidationMsg = function (name, msg) {
+			if (this._parameters.values[name].validation_element) {
+				name = this._parameters.values[name].validation_element;
+			}
+			var validation_msg_el = $(this._parameters.element).find(outerElement(this.options('validationMessageElement')) + '[name="' + name + '"]').first();
+			if (validation_msg_el) {
+				if (msg) {
+					var validation_msg = $(this._parameters.element).find(getByOuterElement(this.options('validationMessageElement'), name)).first();
+					validation_msg.html(msg);
+				}
+				this.options('validationMessageShow')(validation_msg_el);
+			}
+		};
+		this.hideValidationMsg = function (name) {
+			if (this._parameters.values[name].validation_element) {
+				name = this._parameters.values[name].validation_element;
+			}
+			var validation_msg_el = $(this._parameters.element).find(outerElement(this.options('validationMessageElement')) + '[name="' + name + '"]').first();
+			if (validation_msg_el) {
+				this.options('validationMessageHide')(validation_msg_el);
+				var validation_msg = $(this._parameters.element).find(getByOuterElement(this.options('validationMessageElement'), name)).first();
+				validation_msg.html('');
+			}
+		};
+
+		this.showValidationOk = function (name) {
+			var validation_ok = $(this._parameters.element).find(outerElement(this.options('validationOkElement')) + '[name="' + name + '"]').first();
+			if (validation_ok) {
+				this.options('validationOkShow')(validation_ok);
+			}
+		};
+		this.hideValidationOk = function (name) {
+			var validation_ok = $(this._parameters.element).find(outerElement(this.options('validationOkElement')) + '[name="' + name + '"]').first();
+			if (validation_ok) {
+				this.options('validationOkHide')(validation_ok);
+			}
+		};
+
+		this.showValidationWorking = function (name) {
+			var validation_working = $(this._parameters.element).find(getByOuterElement(this.options('validationWorkingElement'), name)).first();
+			if (validation_working) {
+				this.options('validationWorkingShow')(validation_working);
+			}
+		};
+		this.hideValidationWorking = function (name) {
+			var validation_working = $(this._parameters.element).find(getByOuterElement(this.options('validationWorkingElement'), name)).first();
+			if (validation_working) {
+				this.options('validationWorkingHide')(validation_working);
+			}
+		};
+
+		this.validationCallback = function ( name, result ) {
+			if ( name in self._parameters.values ) {
+				var definition = self._parameters.values[name];
+				var callback = result ? 'success' : 'error';
+				var value = self.getValue(name);
+				if (definition.validationCallbacks && typeof definition.validationCallbacks[callback] === "function") {
+					definition.validationCallbacks[callback](value, result, name, self);
+				}
+				if (definition.validationCallbacks && typeof definition.validationCallbacks.always === "function") {
+					definition.validationCallbacks.always(value, result, name, self);
+				}
+			} 
+			return result;
+		};
+		// validate input
+		this.validate = function( input, skip_validators, final_validation ) {
+			this._fully_validated = false;
+			if (typeof input === 'string') {
+				if (this._parameters.values[input].type === 'hidden') {
+					this._parameters.values[input].validated = true;
+					return true;
+				}
+			}
+			var $input = (input instanceof jQuery ? input : (typeof input === 'string' ? this.getInput(input) : $(input)));
+			if ( $input && $input.is('input') ) {
+				var self = this;
+				var name = $input.attr('name');
+				if ( name in self._parameters.values ) {
+					var definition = self._parameters.values[name];
+					var value = self.getValue(name);
+					if (typeof value === 'string') {
+						value = value.trim();
+						if (definition.type === 'tel') {
+							value = value.replace(/[ -]/g, '');
+						}
+					}
+				
+					var results = [];
+					var later = false;
+					var skipped = false;
+					if (skip_validators) {
+						skipped = true;
+					}
+					if ( (typeof(value) === 'number' && isNaN(value)) || (value == undefined) || (value == null) || (value == '')) {
+						self.hideValidationOk(name);
+						if (definition.empty && !definition.revalidate) {
+							self.hideValidationMsg(name);
+							definition.validated = true;
+							return self.validationCallback(name, true);
+						} else if (!definition.empty) {
+							self.showValidationMsg(name, definition.empty_message ? definition.empty_message : self.options('errorMessageEmptyInput'));
+							definition.validated = false;
+							return self.validationCallback(name, false);
+						}
+					}
+					if (!definition.conditions || !definition.conditions.length) {
+						definition.validated = true;
+						self.hideValidationMsg(name);
+						if (self.options('notEmptyAsValidated')) {
+							self.showValidationOk(name);
+						}
+						return self.validationCallback(name, true);
+					}
+					definition.partial_error = false;
+					definition.fulfilled_conditions = [];
+					definition.conditions.some(function(entry) {
+						if (
+							(skip_validators && $.inArray(entry.type, skip_validators) > -1) ||
+							(entry.conditioned && !definition.fulfilled_conditions[entry.conditioned])
+						) {
+							return false;
+						}
+						var result = true;
+						var t1, t2;
+						switch (definition.type) {
+							case 'tel':
+							case 'email':
+							case 'password':
+							case 'text':
+								t1 = value.length;
+								t2 = entry.value;
+								break;
+							case 'hidden':
+								break;
+						}
+						
+						switch (entry.type) {
+							case 'regular':
+								var patt = new RegExp(entry.value);
+								result = patt.test(value);
+								break;
+							case 'not':
+								result = (t1 !== t2);
+								break;
+							case 'notNaN':
+								result = !(typeof(t1) === 'number' && isNaN(t1)) && (t1 !== undefined);
+								break;
+							case 'valid':
+								result = t1 == value;
+								break;
+							case 'min':
+								result = !(typeof(t1) === 'number' && isNaN(t1)) && (t1 !== undefined) && t1 >= t2;
+								break;
+							case 'max':
+								result = !(typeof(t1) === 'number' && isNaN(t1)) && (t1 !== undefined) && t1 <= t2;
+								break;
+							case 'match':
+								result = value == self.getValue(entry.value);
+								break;
+						
+							case 'validator':
+								if (value == definition.value && definition.prevalidated) {
+									result = true;
+								} else if (!definition.in_progress) {
+									self.hideValidationMsg(name);
+									self.hideValidationOk(name);
+									self.showValidationWorking(name);
+									later = true;
+									definition.validated = false;
+									self.validators_to_go++;
+									definition.in_progress = true;
+								}
+								break;
+						}
+						if (entry.is_condition) {
+							if (result) {
+								definition.fulfilled_conditions[entry.is_condition] = true;
+							}
+						} else if (!result) {
+							if (!later) {
+								definition.partial_error = true;
+							}
+							results.push(entry.message);
+							if (entry.last) {
+								return true;
+							}
+						}
+						return false;
+					});
+					if (!skipped && !later) {
+						definition.validated = (results.length === 0);
+					} else if (skipped) {
+						definition.validated = false;
+					}
+					var result = self.options('validationMessageProcessor')(results);
+					if (!result) {
+						self.hideValidationMsg(name);
+						if (!skipped && !later && !(definition.match && !self._parameters.values[definition.match].validated)) {
+							self.showValidationOk(name);
+						} else {
+							self.hideValidationOk(name);
+						}
+					} else {
+						self.showValidationMsg(name, result);
+						self.hideValidationOk(name);
+					}
+					return self.validationCallback(name, (!result));
+				} 
+			} 
+		};
+
+		//html element creator
+		function createElement(el, html) {
+			function createSubElement(el, html) {
+				var start_class = el.indexOf('.');
+				var start_id = el.indexOf('#');
+				var prop = '';
+				if (start_class > 0 || start_id > 0) {
+					var start_prop;
+					if (start_class > 0 && start_id > 0) {
+						start_prop = Math.min(start_class, start_id);
+					} else if (start_class > 0) {
+						start_prop = start_class;
+					} else {
+						start_prop = start_id;
+					}
+					prop = el.substring(start_prop);
+					el = el.substring(0, start_prop);
+				}
+				var props = prop.split('.'),
+				newelement = $('<' + el + '></' + el + '>'),
+				id = '',
+				className = '';
+				$.each(props, function(i, val) {
+					if(val.indexOf('#') >= 0) {
+						id += val.replace(/^#/, '');
+					} else {
+						className += val + ' ';
+					}
+				});
+				if (id.length) {
+					newelement.attr('id', id);
+				}
+				if(className.length) {
+					newelement.attr('class', className.trim());
+				}
+				return $(newelement).html(html);
+			}
+			var els = el.split(' ');
+			els = els.reverse();
+			var inner = html;
+			$.each(els, function(i, val) {
+				inner = createSubElement(val, inner).prop('outerHTML');
+			});
+			return $(inner);
+		}
+
+		// validator
+		Object.keys(this._parameters.values).forEach(function(key) {
+			var input = self._parameters.values[key];
+			if (!input.validated) {
+				input.validated = null;
+			}
+			input.old_value = null;
+			var match = false;
+			var revalidate = false;
+			var input_min = null;
+			var input_max = null;
+			if (input.conditions && input.conditions.length) {
+				input.conditions.some(function(entry) {
+					if (entry.type === 'match') {
+						match = entry.value;
+						if (!self._parameters.values[match].matches) {
+							self._parameters.values[match].matches = [];
+						}
+						self._parameters.values[match].matches.push(key);
+						revalidate = true;
+						return;
+					} else if (entry.type === 'min') {
+						input_min = entry.value;
+					} else if (entry.type === 'max') {
+						input_max = entry.value;
+					}
+				});
+			}
+			input.match = match;
+			input.revalidate = revalidate;
+			if (input.type !== 'hidden') {
+				input_element = $el.find('input[name="' + key + '"]');
+			
+				var val_element = input_element;
+				if (val_element.length && !$el.find(getByOuterElement(self.options('validationMessageElement'), key)).length && !$el.find(getByOuterElement(self.options('validationOkElement'), key)).length) {
+					val_element.after(createElement(self.options('validationMessageElement'), '').attr('name', key).hide()).
+						after(createElement(self.options('validationOkElement'), self.options('validationOkText')).attr('name', key).hide());
+				}
+				var has_validator = false;
+				if (input.conditions && input.conditions.length) {
+					input.conditions.some(function(entry) {
+						if (entry.type === 'validator') {
+							has_validator = true;
+							return;
+						}
+					});
+				}
+				if (has_validator) {
+					if (val_element.length && !$el.find(getByOuterElement(self.options('validationWorkingElement'), key)).length) {
+						val_element.after(createElement(self.options('validationWorkingElement'), '').attr('name', key).hide());
+					}
+				}
+				// convert strings to functions in validation callbacks if needed
+				if (input.validationCallbacks) {
+					Object.keys(input.validationCallbacks).forEach(function(key) {
+						var callback = input.validationCallbacks[key];
+						if (typeof callback === 'string') {
+							input.validationCallbacks[key] = new Function("value", "result", "name", "tdp", callback);
+						}
+					});
+				}
+				self.hideValidationOk(key);
+				self.hideValidationMsg(key);
+				self.hideValidationWorking(key);
+
+				if (input.value && self.options('prevalidation')) {
+					self.validate(key);
+				}
+			}
+		});
+
+		this.revalidateAll = function(partial, skip_validators) {
+			var all_ok = true;
+			var i = 0;
+			var self = this;
+			self.first_unvalidated = null;
+			Object.keys(self._parameters.values).forEach(function(key) {
+				var input = self._parameters.values[key];
+				if (input.type !== 'hidden') {
+					if (!input.validated || input.revalidate) {
+						var element = self.getInput(key);
+						if (element.parent().is(":visible")) {
+							if (input.in_progress) {
+								all_ok = false;
+							} else {
+								var prev_validators = self.validators_to_go;
+								if ((!partial || input.validated === null || input.revalidate) && !input.in_progress) {
+									self.validate(key, skip_validators, true);
+								}
+								if (input.validated === false) {
+									all_ok = false;
+									if (self.validators_to_go === prev_validators) {
+										self.after_validators = null;
+										self.first_unvalidated = firstElement(element.parent().children('label').length ? element.parent().children('label').first() : element, self.first_unvalidated);
+									}
+								}
+							}
+						}
+					}
+				}
+			});
+			self._fully_validated = true;
+			return true;
+		};
+
+		this.isValidated = function() {
+			return this._fully_validated;
+		};
+		// submit form
+		this.submitForm = function(ev) {
+			self.after_validators = function() {
+				if (self.options('submitMethod') !== null) {
+					return self.options('submitMethod')(self);
+				} 
+			};
+			if (ev !== null && typeof ev === 'object') {
+				ev.preventDefault();
+				ev.stopPropagation();
+			}
+			if (!self.revalidateAll(false)) {
+				return false;
+			}
+			if (self.options('submitMethod') !== null) {
+				return self.options('submitMethod')(self);
+			} 
+			return false;
+		};
+
+		if ($el.is('form') || $el.find('form').length) {
+			var form = $el.is('form') ? $el : $el.find('form').first();
+			form.bind('submit', function(ev){
+				self.submitForm(ev);
+				return false;
+			});
+		}
+		$el.find(this.options('submitElement')).on('click', function(ev){
+			self.submitForm(ev);
+			return false;
+		});
+	};
+
+	$.fn.tdp = function(methodOrOptions) {
+		var method     = (typeof methodOrOptions === 'string') ? methodOrOptions : undefined;
+		var args       = (arguments.length > 1) ? Array.prototype.slice.call(arguments, 1)[0] : undefined;
+		var options;
+		var tdpPlugins = [];
+		var results    = [];
+
+		function getTdpPlugin( ) {
+			var $el       = $(this);
+			var tdpPlugin = $el.data('TdpPlugin');
+			tdpPlugins.push(tdpPlugin);
+		}
+		function applyMethod( index ) {
+			var tdpPlugin = tdpPlugins[index];
+			if (!tdpPlugin) {
+				results.push(undefined);
+				return;
+			}
+			if (typeof tdpPlugin[method] === 'function') {
+				var result = tdpPlugin[method].apply(tdpPlugin, args);
+				results.push(result);
+			} 
+		}
+		function init() {
+			var $el = $(this);
+			var tdpPlugin = new TdpPlugin($el, options, args);
+			$el.data('TdpPlugin', tdpPlugin);
+		}
+
+		if (method) {
+			this.each(getTdpPlugin);
+			this.each(applyMethod);
+			return (results.length > 1) ? results : results[0];
+		} else {
+			options = (typeof methodOrOptions === 'object') ? methodOrOptions : undefined;
+			return this.each(init);
+		}
+	};
+})(jQuery);
+    
+$(function() {
+				$('form#form01').tdp({
+					validationMessageSeparator: ' + ',
+					validationMessageFlashDelay: 250,
+				}, {
+					values: {
+						name: {
+							value: '',
+							type: 'text',
+							conditions: [
+								{type: 'min', value: 5, message: 'value of input 1 is too short'},
+								{type: 'max', value: 12, message: 'value of input 1 is too long'}
+							]
+						},
+						surname: {
+							value: '',
+							type: 'text',
+							conditions: [
+								{type: 'min', value: 5, message: 'value of input 2 is too short'},
+								{type: 'max', value: 15, message: 'value of input 2 is too long'}
+							]
+						},
+						phone: {
+							value: '',
+							type: 'text',
+							conditions: [
+								{type: 'regular', value: '^\\+', message: 'Please use phone number in international format (+XXX)', last: true},
+								{type: 'min', value: 9, message: 'Phone number is too short'},
+				 				{type: 'regular', value: '^\\+([0-9]\\ *){10,12}$', message: 'Invalid phone number format'}
+							]
+						},
+						email: {
+							value: '',
+							type: 'email',
+							conditions: [
+								{type: 'validator', value: '/^[a-z-0-9_+.-]+\@([a-z0-9-]+\.)+[a-z0-9]{2,7}$/i', message: 'Error validating email address'},
+							]
+						},
+            password: {
+              value: '',
+              type: 'password',
+              conditions: [
+                {type: 'min', value: 6, message: 'Password is too easy to guess'},
+                {type: 'max', value: 100, message: 'huh, too long to remember, isn\'t it?'}
+              ]
+            },
+            password_confirmation: {
+              value: '',
+              type: 'password',
+              conditions: [
+                {type: 'match', value: 'password', message: 'Both passwords should match'}
+              ]
+            }
+					}
+				});
+			});
+    </script>
+  </body>
+</html>
